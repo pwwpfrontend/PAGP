@@ -1,9 +1,9 @@
 // components/DeviceManagement.js
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
-import Header from "../subcomp/Header";
-import SensorSummaryCard from "../subcomp/SensorSummaryCard";
-import { Search } from "lucide-react";
+import Header from "./Header";
+import SensorSummaryCard from "./SensorSummaryCard";
+import { Search, X } from "lucide-react";
 
 const DeviceManagement = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -34,9 +34,9 @@ const DeviceManagement = () => {
     const allDevices = sensorData.devices || [];
     const statusMap = sensorData.devicesStatus || {};
 
-    const occupancy = []; // PAG-DS
-    const iaq = []; // PAG-IAQ
-    const pag33f = []; // PAG-33/F
+    const occupancy = [];
+    const iaq = [];
+    const pag33f = [];
 
     allDevices.forEach((deviceId) => {
       const device = statusMap[deviceId];
@@ -59,12 +59,15 @@ const DeviceManagement = () => {
     ];
   };
 
-  const filteredGroups = getSensorGroups().map((group) => ({
-    ...group,
-    sensors: group.sensors.filter((sensor) =>
-      sensor.id.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-  }));
+  // 🔍 Updated filter logic: deep match any field
+  const filteredGroups = getSensorGroups()
+    .map((group) => {
+      const filteredSensors = group.sensors.filter((sensor) =>
+        JSON.stringify(sensor).toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      return { ...group, sensors: filteredSensors };
+    })
+    .filter((group) => group.sensors.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,20 +84,30 @@ const DeviceManagement = () => {
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-bold">Devices</h1>
 
-          {/* Search */}
+          {/* 🔍 Search Bar */}
           <div className="relative w-full">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
               <Search size={18} />
             </span>
+            {searchTerm && (
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                onClick={() => setSearchTerm("")}
+              >
+                <X size={18} />
+              </button>
+            )}
             <input
               type="text"
-              placeholder="Search by device ID or Type or Area"
-              className="w-full pl-10 pr-4 py-2 border rounded-md"
+              placeholder="Search anything (ID, type, area, values...)"
+              className="w-full pl-10 pr-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {/* Summary Cards */}
+
+          {/* 📊 Sensor Summary Cards */}
           {loading ? (
             <p className="text-gray-500">Loading sensor data...</p>
           ) : error ? (
@@ -108,6 +121,7 @@ const DeviceManagement = () => {
                   icon={group.icon}
                   count={group.sensors.length}
                   sensors={group.sensors}
+                  defaultExpanded={group.title === "Occupancy Sensors"}
                 />
               ))}
             </div>

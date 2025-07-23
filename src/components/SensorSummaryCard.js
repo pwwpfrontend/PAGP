@@ -1,3 +1,4 @@
+// SensorSummaryCard.js
 import React, { useState } from "react";
 import {
   ChevronRight,
@@ -11,7 +12,7 @@ import {
   Target,
 } from "lucide-react";
 
-// Map for section icons
+// Icon map by category
 const iconMap = {
   occupancy: <Target className="text-gray-500" />,
   iaq: <Wind className="text-gray-500" />,
@@ -20,18 +21,17 @@ const iconMap = {
   acupressure: <Target className="text-gray-500" />,
 };
 
-// Function to check if sensor is connected based on lastUpdated
+// Sensor connected if updated within 24h
 const isSensorConnected = (timestamp) => {
   if (!timestamp || timestamp === 0) return false;
   const updatedTime = new Date(timestamp);
   const now = new Date();
   const diffInMs = now - updatedTime;
-  const diffInHours = diffInMs / (1000 * 60 * 60);
-  return diffInHours <= 24;
+  return diffInMs / (1000 * 60 * 60) <= 24;
 };
 
-const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const SensorSummaryCard = ({ title, count, icon, sensors = [], defaultExpanded = false }) => {
+  const [isExpanded, setIsExpanded] = useState(title === "Occupancy Sensors" ? true : defaultExpanded);
   const [expandedSensorId, setExpandedSensorId] = useState(null);
 
   const toggleSensorDetails = (sensorId) => {
@@ -40,7 +40,7 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
 
   return (
     <div className="bg-white rounded-lg shadow border transition">
-      {/* Sensor Group Header */}
+      {/* Header */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50"
@@ -61,7 +61,8 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
         )}
       </div>
 
-      {/* Sensors List */}
+
+      {/* Sensor List */}
       {isExpanded && (
         <div className="divide-y">
           {sensors.length === 0 ? (
@@ -72,7 +73,7 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
 
               return (
                 <div key={sensor.id}>
-                  {/* Sensor Row */}
+                  {/* Row */}
                   <div
                     onClick={() => toggleSensorDetails(sensor.id)}
                     className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50"
@@ -88,7 +89,6 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
                       </div>
                       <p className="text-sm text-gray-500">{sensor.area}</p>
                     </div>
-
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Plug size={16} className="text-gray-500" />
                       <span>{sensor.power || "POE"}</span>
@@ -100,20 +100,16 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
                     </div>
                   </div>
 
-                  {/* Sensor Details */}
+                  {/* Expanded Sensor Detail */}
                   {expandedSensorId === sensor.id && (
                     <div className="bg-gray-50 px-6 py-4 text-sm text-gray-700 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-gray-500">Device Type</p>
-                        <p className="font-medium">
-                          {sensor.deviceType || "Unknown"}
-                        </p>
+                        <p className="font-medium">{sensor.deviceType || "Unknown"}</p>
                       </div>
                       <div>
                         <p className="text-gray-500">Status</p>
-                        <p className="font-medium">
-                          {sensor.status || "Active"}
-                        </p>
+                        <p className="font-medium">{sensor.status || "Active"}</p>
                       </div>
                       <div>
                         <p className="text-gray-500">Location</p>
@@ -121,9 +117,7 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
                       </div>
                       <div>
                         <p className="text-gray-500">Area</p>
-                        <p className="font-medium">
-                          {sensor.areaNumber || "N/A"}
-                        </p>
+                        <p className="font-medium">{sensor.areaNumber || "N/A"}</p>
                       </div>
                       <div>
                         <p className="text-gray-500">Power</p>
@@ -135,13 +129,31 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [] }) => {
                       <div>
                         <p className="text-gray-500">Last Updated</p>
                         <p className="font-medium">
-                          {sensor.timestamp
-                            ? new Date(sensor.timestamp).toLocaleString()
-                            : "N/A"}
+                          {sensor.timestamp ? new Date(sensor.timestamp).toLocaleString() : "N/A"}
                         </p>
                       </div>
 
-                      {/* Edit Button */}
+                      {/* IAQ Sensor Fields */}
+                      {sensor.temperature !== undefined && (
+                        <div>
+                          <p className="text-gray-500">Temperature (°C)</p>
+                          <p className="font-medium">{sensor.temperature}</p>
+                        </div>
+                      )}
+                      {sensor.co2 !== undefined && (
+                        <div>
+                          <p className="text-gray-500">CO₂ (ppm)</p>
+                          <p className="font-medium">{sensor.co2}</p>
+                        </div>
+                      )}
+                      {sensor.pm25 !== undefined && (
+                        <div>
+                          <p className="text-gray-500">PM2.5 (µg/m³)</p>
+                          <p className="font-medium">{sensor.pm25}</p>
+                        </div>
+                      )}
+
+                      {/* Edit */}
                       <div className="col-span-1 md:col-span-2 text-right">
                         <button className="px-4 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
                           Edit
