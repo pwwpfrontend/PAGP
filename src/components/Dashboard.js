@@ -108,7 +108,7 @@ const Dashboard = () => {
         <div className="pb-4 flex justify-between items-center px-2 sm:px-4">
           <h1 className="text-3xl md:text-4xl font-semibold text-gray-800 text-[40px]">Dashboard</h1>
           <div className="text-right">
-            <div className="text-[40px] font-extrabold text-gray-700">{time}</div>
+            <div className="text-[40px] font-bold text-gray-700">{time}</div>
             <div className="text-lg font-semibold text-gray-800">{date}</div>
           </div>
         </div>
