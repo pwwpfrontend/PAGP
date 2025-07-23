@@ -27,7 +27,6 @@ const Dashboard = () => {
     const day = date.getDate();
     const month = date.toLocaleDateString('en-US', { month: 'short' });
     const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
-
     return {
       time,
       date: `${day} ${month}, ${weekday}`,
@@ -38,16 +37,13 @@ const Dashboard = () => {
     if (intervalId) clearInterval(intervalId);
     if (progressIntervalId) clearInterval(progressIntervalId);
     setProgress(0);
-
     const progressId = setInterval(() => {
       setProgress(prev => (prev >= 100 ? 0 : prev + 1));
     }, 100);
-
     const timerId = setInterval(() => {
       setActiveTab(prev => (prev + 1) % tabs.length);
       setProgress(0);
     }, 10000);
-
     setProgressIntervalId(progressId);
     setIntervalId(timerId);
   };
@@ -62,9 +58,7 @@ const Dashboard = () => {
     const clockInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-
     startTimer();
-
     return () => {
       clearInterval(clockInterval);
       if (intervalId) clearInterval(intervalId);
@@ -85,11 +79,9 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
+      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+
       {/* Header */}
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
       <header className="bg-white custom-shadow h-14 lg:h-20 xl:h-[100px] fixed top-0 left-0 w-full z-10 flex items-center justify-between px-6">
         <div className="flex items-center h-full">
           <button
@@ -111,15 +103,13 @@ const Dashboard = () => {
         />
       </header>
 
-      {/* Padding below header */}
       <div className="pt-20 lg:pt-28 px-4 md:px-8">
-
         {/* Title & Time */}
-        <div className="pb-4 flex flex-wrap justify-between items-center">
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Dashboard</h1>
+        <div className="pb-4 flex justify-between items-center px-2 sm:px-4">
+          <h1 className="text-3xl md:text-4xl font-semibold text-gray-800 text-[40px]">Dashboard</h1>
           <div className="text-right">
-            <div className="text-lg sm:text-xl font-semibold text-gray-800">{time}</div>
-            <div className="text-sm sm:text-base text-gray-600">{date}</div>
+            <div className="text-[40px] font-extrabold text-gray-700">{time}</div>
+            <div className="text-lg font-semibold text-gray-800">{date}</div>
           </div>
         </div>
 
@@ -129,58 +119,57 @@ const Dashboard = () => {
             <div key={tab} className="flex flex-col items-center">
               <button
                 onClick={() => handleTabClick(index)}
-                className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
-                  activeTab === index ? 'text-white' : 'bg-gray-300 text-black hover:bg-gray-400'
-                }`}
-                  style={activeTab === index ? { backgroundColor: '#929292' } : {}}
+                      className={`px-12 py-4 rounded-2xl font-bold text-xl ${
+                                  activeTab === index
+                                    ? 'text-white'
+                                    : 'bg-gray-300 text-black'
+                                }`}
+
+                style={activeTab === index ? { backgroundColor: '#929292' } : {}}
               >
                 {tab}
               </button>
-             {activeTab === index && (
-              <div className="w-full h-1 mt-2 bg-gray-300 rounded overflow-hidden">
-                <div
-                  className="h-full transition-all duration-100 ease-linear"
-                  style={{ width: `${progress}%`, backgroundColor: '#929292' }}
-                />
-              </div>
-            )}
-
+              {activeTab === index && (
+                <div className="w-full h-1 mt-2 bg-gray-300 rounded overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-100 ease-linear"
+                    style={{ width: `${progress}%`, backgroundColor: '#929292' }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         {/* Rooms Grid */}
-     {/* Rooms Grid */}
-<main className="px-2 pt-8 pb-8">
-  <div className="grid gap-x-6 gap-y-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 px-2 sm:px-4">
-    {currentRooms.slice(0, 15).map((room, index) => {
-      const isOccupied = occupancyStatus[activeTab]?.[index];
-      const bgStyle = {
-        background: isOccupied
-          ? 'linear-gradient(45deg, #E67A69, #EB9F94)'
-          : 'linear-gradient(45deg, #55BC7E, #7DCA8B)',
-      };
-
-      return (
-        <div
-          key={`${activeTab}-${index}`}
-          style={bgStyle}
-          className="text-white rounded-xl p-4 sm:p-6 text-center font-medium hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer min-h-[100px] flex items-center justify-center text-sm sm:text-lg"
-        >
-          {room}
-        </div>
-      );
-    })}
-  </div>
-</main>
-
+        <main className="px-2 pt-8 pb-8">
+          <div className="grid gap-x-6 gap-y-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 px-2 sm:px-4">
+            {currentRooms.slice(0, 15).map((room, index) => {
+              const isOccupied = occupancyStatus[activeTab]?.[index];
+              const bgStyle = {
+                background: isOccupied
+                  ? 'linear-gradient(45deg, #E67A69, #EB9F94)'
+                  : 'linear-gradient(45deg, #55BC7E, #7DCA8B)',
+              };
+              return (
+                <div
+                  key={`${activeTab}-${index}`}
+                  style={bgStyle}
+                  className="text-white rounded-xl p-4 sm:p-6 text-center font-medium cursor-pointer min-h-[100px] flex items-center justify-center text-sm sm:text-lg"
+                >
+                  {room}
+                </div>
+              );
+            })}
+          </div>
+        </main>
       </div>
 
       {/* IAQ Bubble */}
       <div className="fixed bottom-6 right-6 z-50">
         <div
           style={{ background: getIAQGradient(iaqPercentage) }}
-          className="text-white rounded-full w-16 h-16 sm:w-20 sm:h-20 flex flex-col items-center justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-110"
+          className="text-white rounded-full w-16 h-16 sm:w-20 sm:h-20 flex flex-col items-center justify-center shadow-lg cursor-pointer"
           title={`Indoor Air Quality: ${iaqPercentage >= 90 ? 'Excellent' : iaqPercentage >= 70 ? 'Moderate' : 'Poor'}`}
         >
           <span className="text-lg sm:text-xl font-bold">{iaqPercentage}%</span>
