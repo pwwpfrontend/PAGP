@@ -23,7 +23,7 @@ function Gym() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // ✅ Use previous state to avoid stale state issue
+
       setFacilities(prevFacilities =>
         prevFacilities.map(f => ({
           ...f,
