@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './Sidebar'; // assuming it is in the same directory
+import Sidebar from './Sidebar'; 
+import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 
 function Gym() {
   const initialFacilities = [
