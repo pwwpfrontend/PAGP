@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
-import { FaWind, FaUsers } from "react-icons/fa";
+import HistoricalOccupancy from "./HistoricalOccupancy";
+import Bookings from "./Bookings"; // Import the Bookings component
+import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCalendarAlt for bookings icon
 import axios from "axios";
 
 const MainAnalytics = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("iaq"); // Default to IAQ tab
-  const [buildingName, setBuildingName] = useState("Historical Report"); // Default value for PAG
+  const [buildingName, setBuildingName] = useState("Historical Report");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Date state for the tabs
   const [dateRange, setDateRange] = useState({
     fromDate: new Date().toISOString().split("T")[0],
     toDate: new Date().toISOString().split("T")[0],
@@ -21,31 +22,23 @@ const MainAnalytics = () => {
   });
   const [reportType, setReportType] = useState("daily");
 
-  // Helper function to get week range (Sunday to Saturday) for a given date
   const getWeekRange = (date) => {
     const d = new Date(date);
-    const day = d.getDay(); // 0 for Sunday, 1 for Monday, etc.
-
-    // Calculate the date of Sunday (start of week)
+    const day = d.getDay();
     const diff = d.getDate() - day;
     const sunday = new Date(d.setDate(diff));
-
-    // Calculate the date of Saturday (end of week)
     const saturday = new Date(sunday);
     saturday.setDate(sunday.getDate() + 6);
-
     return {
       fromDate: sunday.toISOString().split("T")[0],
       toDate: saturday.toISOString().split("T")[0],
     };
   };
 
-  // Helper function to get month range (first and last day of month)
   const getMonthRange = (yearMonth) => {
     const [year, month] = yearMonth.split("-").map(Number);
     const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0); // Last day of the month
-
+    const lastDay = new Date(year, month, 0);
     return {
       fromDate: firstDay.toISOString().split("T")[0],
       toDate: lastDay.toISOString().split("T")[0],
@@ -60,7 +53,6 @@ const MainAnalytics = () => {
     });
   };
 
-  // Tab switching handler
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
@@ -91,7 +83,7 @@ const MainAnalytics = () => {
           alt="Logo"
           className="h-8 lg:h-12 mx-auto"
           onError={(e) => {
-            e.target.style.display = 'none';
+            e.target.style.display = "none";
           }}
         />
       </header>
@@ -99,7 +91,7 @@ const MainAnalytics = () => {
       {/* Main Content */}
       <main className="pt-24 lg:pt-32 px-4 md:px-8 pb-12">
         <div className="max-w-9xl mx-auto">
-          {/* Location & Title */}
+          {/* Title */}
           <div className="mb-6">
             {loading ? (
               <div className="h-10 w-64 bg-gray-200 animate-pulse rounded"></div>
@@ -113,6 +105,7 @@ const MainAnalytics = () => {
           {/* Tabs */}
           <div className="mb-8">
             <div className="flex flex-wrap border-b border-gray-200">
+              {/* IAQ Tab */}
               <button
                 className={`px-6 py-4 text-sm md:text-base font-medium transition-all duration-200 ease-in-out flex items-center justify-center relative ${
                   activeTab === "iaq"
@@ -132,7 +125,8 @@ const MainAnalytics = () => {
                 )}
               </button>
 
-              {/* <button
+              {/* Occupancy Tab */}
+              <button
                 className={`px-6 py-4 text-sm md:text-base font-medium transition-all duration-200 ease-in-out flex items-center justify-center relative ${
                   activeTab === "occupancy"
                     ? "text-blue-600"
@@ -142,18 +136,42 @@ const MainAnalytics = () => {
               >
                 <FaUsers
                   className={`w-4 h-4 mr-2 ${
-                    activeTab === "occupancy" ? "text-blue-600" : "text-gray-600"
+                    activeTab === "occupancy"
+                      ? "text-blue-600"
+                      : "text-gray-600"
                   }`}
                 />
                 Occupancy
                 {activeTab === "occupancy" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
                 )}
-              </button> */}
+              </button>
+
+              {/* Bookings Tab */}
+              <button
+                className={`px-6 py-4 text-sm md:text-base font-medium transition-all duration-200 ease-in-out flex items-center justify-center relative ${
+                  activeTab === "bookings"
+                    ? "text-blue-600"
+                    : "text-gray-700 hover:text-gray-900"
+                }`}
+                onClick={() => handleTabChange("bookings")}
+              >
+                <FaCalendarAlt
+                  className={`w-4 h-4 mr-2 ${
+                    activeTab === "bookings"
+                      ? "text-blue-600"
+                      : "text-gray-600"
+                  }`}
+                />
+                Bookings
+                {activeTab === "bookings" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Tab Content Container */}
+          {/* Tab Content */}
           <div className="tab-content-container">
             {activeTab === "iaq" && (
               <div className="iaq-tab">
@@ -163,7 +181,13 @@ const MainAnalytics = () => {
 
             {activeTab === "occupancy" && (
               <div className="occupancy-tab">
-                {/* <OccupancyAnalytics /> */}
+                <HistoricalOccupancy />
+              </div>
+            )}
+
+            {activeTab === "bookings" && (
+              <div className="bookings-tab">
+                <Bookings />
               </div>
             )}
           </div>
