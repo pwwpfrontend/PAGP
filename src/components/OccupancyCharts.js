@@ -7,16 +7,8 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
 
   // Format date for display
   const formatDisplayDate = () => {
-    if (reportType === "hourly") {
-      // For hourly, show current date
-      const now = new Date();
-      return now.toLocaleDateString('en-GB', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      });
-    } else if (reportType === "daily") {
-      // For daily, show the selected date
+    if (reportType === "daily") {
+      // For daily, show the selected date from item data or current date as fallback
       if (item.date) {
         const date = new Date(item.date);
         return date.toLocaleDateString('en-GB', { 
@@ -25,6 +17,13 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
           year: 'numeric' 
         });
       }
+      // Fallback to current date if no item date
+      const now = new Date();
+      return now.toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
     } else {
       // For weekly/custom, show date range
       if (item.date_range) {
@@ -55,26 +54,72 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
     });
   };
 
-  // Prepare pie chart data
-  const preparePieChartData = () => {
-    const occupancyPercentage = parseFloat(item.occupancy_percentage?.replace('%', '') || 0);
-    const availablePercentage = Math.max(0, 100 - occupancyPercentage);
-    
-    return [
-      { name: "Occupied", value: occupancyPercentage },
-      { name: "Available", value: availablePercentage }
-    ];
-  };
+// Prepare pie chart data based on revised logic for daily report
+const preparePieChartData = () => {
+  if (reportType === "daily") {
+    // For daily reports, calculate average occupancy percentage from business hours (9-17)
+    if (chartData && chartData.length > 0) {
+      const businessHoursData = chartData.filter(d => {
+        const hour = d.hour || 0;
+        return hour >= 9 && hour <= 17;
+      });
+      
+      const totalOccupied = businessHoursData.reduce((acc, dataPoint) => {
+        return acc + (dataPoint.occupancy || 0);
+      }, 0);
+      
+      const averageOccupied = businessHoursData.length ? (totalOccupied / 9) : 0; // Divide by 9 business hours
+      const available = Math.max(0, 100 - averageOccupied);
+      
+      return [
+        { name: "Occupied", value: averageOccupied },
+        { name: "Available", value: available }
+      ];
+    } else {
+      // Fallback: use item's occupancy percentage directly
+      const occupiedValue = parseFloat(item.occupancy_percentage?.replace('%', '') || 0);
+      const availableValue = Math.max(0, 100 - occupiedValue);
+      
+      return [
+        { name: "Occupied", value: occupiedValue },
+        { name: "Available", value: availableValue }
+      ];
+    }
+  } else {
+    // For other report types, use different logic
+    if (chartData && chartData.length > 0) {
+      const totalOccupied = chartData.reduce((acc, dataPoint) => {
+        return acc + (dataPoint.occupancy || 0);
+      }, 0);
+      const averageOccupied = totalOccupied / chartData.length;
+      const available = Math.max(0, 100 - averageOccupied);
+      
+      return [
+        { name: "Occupied", value: averageOccupied },
+        { name: "Available", value: available }
+      ];
+    } else {
+      // Fallback
+      const occupiedValue = parseFloat(item.occupancy_percentage?.replace('%', '') || 0);
+      const availableValue = Math.max(0, 100 - occupiedValue);
+      
+      return [
+        { name: "Occupied", value: occupiedValue },
+        { name: "Available", value: availableValue }
+      ];
+    }
+  }
+};
 
   // Get chart title based on report type
   const getChartTitle = () => {
     switch (reportType) {
-      case "hourly":
-        return "Current Hour";
       case "daily":
-        return "Hourly Trend (09:00-21:00)";
+        return "Hourly Trend (Business Hours)";
       case "weekly":
         return "Daily Trend (7 Days)";
+      case "monthly":
+        return "Daily Trend (Monthly)";
       case "custom":
         return "Daily Trend (Custom Range)";
       default:
@@ -85,10 +130,10 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
   // Get X-axis label
   const getXAxisLabel = () => {
     switch (reportType) {
-      case "hourly":
       case "daily":
         return "Hour";
       case "weekly":
+      case "monthly":
       case "custom":
         return "Date";
       default:
@@ -98,10 +143,10 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
 
   // Format tooltip based on report type
   const formatTooltip = (value, name) => {
-    if (reportType === "hourly" || reportType === "daily") {
-      return [`${value.toFixed(2)}%`, 'Average Occupancy'];
+    if (reportType === "daily") {
+      return [`${value.toFixed(2)}%`, 'Occupancy Percentage'];
     } else {
-      return [`${value.toFixed(2)}`, 'Average Occupancy'];
+      return [`${value.toFixed(2)}%`, 'Average Occupancy Percentage'];
     }
   };
 
@@ -131,7 +176,10 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, '']} />
+              <Tooltip formatter={(value, name) => {
+                // For pie chart, always show as percentage with proper formatting
+                return [`${value.toFixed(1)}`, name];
+              }} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -145,15 +193,22 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
-                  dataKey={reportType === "hourly" || reportType === "daily" ? "hour_display" : "date_display"}
+                  dataKey={reportType === "daily" ? "hour_display" : "date_display"}
                   label={{ value: getXAxisLabel(), position: 'insideBottom', offset: -5 }}
                   tick={{ fontSize: 12 }}
-                  angle={reportType === "weekly" || reportType === "custom" ? -45 : 0}
-                  textAnchor={reportType === "weekly" || reportType === "custom" ? "end" : "middle"}
-                  height={reportType === "weekly" || reportType === "custom" ? 60 : 30}
+                  angle={0}
+                  textAnchor="middle"
+                  height={30}
                 />
                 <YAxis 
-                  label={{ value: 'Average Occupancy (%)', angle: -90, position: 'insideLeft' }} 
+                  domain={[0, 100]}
+                  ticks={[0, 20, 40, 60, 80, 100]}
+                  label={{ 
+                    value: 'Occupancy Percentage (%)', 
+                    angle: -90, 
+                    position: 'insideLeft',
+                    style: { textAnchor: 'middle' }
+                  }} 
                 />
                 <Tooltip formatter={formatTooltip} />
                 <Legend />
@@ -169,7 +224,7 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
           ) : (
             <div className="flex items-center justify-center h-[300px]">
               <p className="text-gray-500">
-                {reportType === "hourly" ? "Loading current hour data..." : "Loading trend data..."}
+                {reportType === "daily" ? "Loading current hour data..." : "Loading trend data..."}
               </p>
             </div>
           )}
@@ -180,3 +235,6 @@ const OccupancyCharts = ({ item, reportType, chartData = [] }) => {
 };
 
 export default OccupancyCharts;
+
+
+

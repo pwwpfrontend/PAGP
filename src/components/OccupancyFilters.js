@@ -26,6 +26,21 @@ const OccupancyFilters = ({
     };
   };
 
+  // Helper function to get month range (first and last day of selected month)
+  const getMonthRange = (selectedDate) => {
+    const date = new Date(selectedDate);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0); // Last day of the month
+    
+    return {
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0]
+    };
+  };
+
   // Handle date change
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -38,6 +53,15 @@ const OccupancyFilters = ({
         selectedDate: value,
         startDate: weekRange.startDate,
         endDate: weekRange.endDate
+      }));
+    } else if (reportType === "monthly" && name === "selectedDate") {
+      // For monthly reports, calculate the month range
+      const monthRange = getMonthRange(value);
+      setDateRange(prev => ({
+        ...prev,
+        selectedDate: value,
+        startDate: monthRange.startDate,
+        endDate: monthRange.endDate
       }));
     } else {
       setDateRange(prev => ({
@@ -54,7 +78,7 @@ const OccupancyFilters = ({
     // Update date range based on report type
     const today = new Date().toISOString().split("T")[0];
     
-    if (newReportType === "hourly" || newReportType === "daily") {
+    if (newReportType === "daily") {
       setDateRange({
         selectedDate: today,
         startDate: today,
@@ -67,6 +91,13 @@ const OccupancyFilters = ({
         startDate: weekRange.startDate,
         endDate: weekRange.endDate
       });
+    } else if (newReportType === "monthly") {
+      const monthRange = getMonthRange(today);
+      setDateRange({
+        selectedDate: today,
+        startDate: monthRange.startDate,
+        endDate: monthRange.endDate
+      });
     } else if (newReportType === "custom") {
       setDateRange({
         selectedDate: today,
@@ -76,9 +107,9 @@ const OccupancyFilters = ({
     }
   };
 
-  // Get date display string for weekly
-  const getWeekRangeDisplay = () => {
-    if (reportType === "weekly" && dateRange.startDate && dateRange.endDate) {
+  // Get date display string for weekly and monthly
+  const getDateRangeDisplay = () => {
+    if ((reportType === "weekly" || reportType === "monthly") && dateRange.startDate && dateRange.endDate) {
       const startDate = new Date(dateRange.startDate);
       const endDate = new Date(dateRange.endDate);
       const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
@@ -101,107 +132,111 @@ return (
     >
     <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-y-6 xl:gap-x-8">
         {/* Filter Controls */}
-        <div className="flex flex-col gap-5 md:flex-row md:items-end flex-wrap md:gap-x-6 lg:gap-x-4 xl:gap-x-9 flex-1">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end flex-wrap sm:gap-x-4 md:gap-x-6 lg:gap-x-4 xl:gap-x-9 flex-1">
           {/* Report Type */}
-          <div className="min-w-[180px]">
+          <div className="min-w-[280px] w-full sm:w-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Report Type
             </label>
-            <div className="flex flex-wrap gap-2">
-              {["hourly", "daily", "weekly", "custom"].map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleReportTypeChange(type)}
-                  className={`px-5 py-2.5 text-sm font-medium transition-colors rounded-md ${
-                    reportType === type
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2 h-[42px] items-center">
+              {["daily", "weekly", "monthly", "custom"].map((type) => {
+                const displayName = type.charAt(0).toUpperCase() + type.slice(1);
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleReportTypeChange(type)}
+                    className={`px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 border ${
+                      reportType === type
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                        : "bg-gray-200 text-gray-800"
+                    }`}
+                  >
+                    {displayName}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Date Picker */}
           {reportType === "custom" ? (
-            <div className="flex gap-3 min-w-[180px]">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={dateRange.startDate}
-                  onChange={handleDateChange}
-                  className="w-32 lg:w-36 px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={dateRange.endDate}
-                  onChange={handleDateChange}
-                  className="w-32 lg:w-36 px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+            <div className="min-w-[180px] w-full sm:w-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date Range
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3 h-[42px]">
+                <div className="flex-1">
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={dateRange.startDate}
+                    onChange={handleDateChange}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Start Date"
+                  />
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={dateRange.endDate}
+                    onChange={handleDateChange}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="End Date"
+                  />
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col min-w-[180px]">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  {reportType === "weekly" ? "Select Week" : "Select Date"}
-                </label>
-                {reportType === "weekly" && (
-                  <span className="text-xs text-gray-500 ml-2">
-                    {getWeekRangeDisplay()}
+            <div className="min-w-[180px] w-full sm:w-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {reportType === "weekly" ? "Select Week" : reportType === "monthly" ? "Select Month" : "Select Date"}
+                {(reportType === "weekly" || reportType === "monthly") && dateRange.startDate && dateRange.endDate && (
+                  <span className="ml-2 text-xs text-gray-500 font-normal">
+                    ({new Date(dateRange.startDate).toLocaleDateString("en-GB")} to {new Date(dateRange.endDate).toLocaleDateString("en-GB")})
                   </span>
                 )}
+              </label>
+              <div className="h-[42px]">
+                <input
+                  type="date"
+                  name="selectedDate"
+                  value={dateRange.selectedDate}
+                  onChange={handleDateChange}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none h-full"
+                />
               </div>
-              <input
-                type="date"
-                name="selectedDate"
-                value={dateRange.selectedDate}
-                onChange={handleDateChange}
-                className={`${
-                  reportType === "weekly" ? "w-56" : "w-44"
-                } md:w-48 px-3 py-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none`}
-              />
             </div>
           )}
 
           {/* Data Type */}
-          <div className="min-w-[160px]">
+          <div className="min-w-[160px] w-full sm:w-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Data Type
             </label>
-            <select
-              value={dataType}
-              onChange={(e) => setDataType(e.target.value)}
-              className="w-40 lg:w-44 px-3 py-2.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="meeting_room">Meeting Room</option>
-              <option value="gym">Gym</option>
-              <option value="phone_booth">Phone Booth</option>
-            </select>
+            <div className="h-[42px]">
+              <select
+                value={dataType}
+                onChange={(e) => setDataType(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none h-full"
+              >
+                <option value="meeting_room">Meeting Room</option>
+                <option value="gym">Gym</option>
+                <option value="phone_booth">Phone Booth</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-end gap-3 mt-4 lg:mt-0 flex-shrink-0 min-w-fit">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 mt-4 lg:mt-0 flex-shrink-0 w-full sm:w-auto">
           {tableData && tableData.length > 0 && (
             <button
               type="button"
               onClick={() => {
                 let csvContent = "data:text/csv;charset=utf-8,";
-                if (reportType === "hourly") {
+                if (reportType === "daily") {
                   csvContent += "Area ID,Occupancy,Occupancy Percentage,Hour\n";
                   csvContent += tableData.map(row =>
                     `${row.area_id},${row.occupancy || 0},${row.occupancy_percentage || '0.00%'},${formatHour(row.hour)}`
@@ -220,14 +255,14 @@ return (
                 link.click();
                 document.body.removeChild(link);
               }}
-              className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2.5 rounded-md text-sm font-medium transition"
+              className="w-full sm:w-auto bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2.5 rounded-md text-sm font-medium transition"
             >
               Export CSV
             </button>
           )}
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-md text-sm font-medium transition disabled:opacity-50"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-md text-sm font-medium transition disabled:opacity-50"
             disabled={isLoading}
           >
             {isLoading ? "Generating..." : "Generate Report"}

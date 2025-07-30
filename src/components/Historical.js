@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
-import HistoricalOccupancy from "./HistoricalOccupancy"; // ✅ NEW IMPORT
-import { FaWind, FaUsers } from "react-icons/fa";
+import HistoricalOccupancy from "./HistoricalOccupancy";
+import Bookings from "./Bookings"; // Import the Bookings component
+import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCalendarAlt for bookings icon
 import axios from "axios";
 
 const MainAnalytics = () => {
@@ -124,7 +125,7 @@ const MainAnalytics = () => {
                 )}
               </button>
 
-              {/* ✅ New Occupancy Tab */}
+              {/* Occupancy Tab */}
               <button
                 className={`px-6 py-4 text-sm md:text-base font-medium transition-all duration-200 ease-in-out flex items-center justify-center relative ${
                   activeTab === "occupancy"
@@ -140,8 +141,30 @@ const MainAnalytics = () => {
                       : "text-gray-600"
                   }`}
                 />
-                 Occupancy
+                Occupancy
                 {activeTab === "occupancy" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
+                )}
+              </button>
+
+              {/* Bookings Tab */}
+              <button
+                className={`px-6 py-4 text-sm md:text-base font-medium transition-all duration-200 ease-in-out flex items-center justify-center relative ${
+                  activeTab === "bookings"
+                    ? "text-blue-600"
+                    : "text-gray-700 hover:text-gray-900"
+                }`}
+                onClick={() => handleTabChange("bookings")}
+              >
+                <FaCalendarAlt
+                  className={`w-4 h-4 mr-2 ${
+                    activeTab === "bookings"
+                      ? "text-blue-600"
+                      : "text-gray-600"
+                  }`}
+                />
+                Bookings
+                {activeTab === "bookings" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
                 )}
               </button>
@@ -159,6 +182,12 @@ const MainAnalytics = () => {
             {activeTab === "occupancy" && (
               <div className="occupancy-tab">
                 <HistoricalOccupancy />
+              </div>
+            )}
+
+            {activeTab === "bookings" && (
+              <div className="bookings-tab">
+                <Bookings />
               </div>
             )}
           </div>

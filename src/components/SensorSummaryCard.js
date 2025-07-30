@@ -10,6 +10,7 @@ import {
   XCircle,
   Plug,
   Target,
+  X,
 } from "lucide-react";
 
 // Icon map by category
@@ -33,9 +34,65 @@ const isSensorConnected = (timestamp) => {
 const SensorSummaryCard = ({ title, count, icon, sensors = [], defaultExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(title === "Occupancy Sensors" ? true : defaultExpanded);
   const [expandedSensorId, setExpandedSensorId] = useState(null);
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const toggleSensorDetails = (sensorId) => {
     setExpandedSensorId((prev) => (prev === sensorId ? null : sensorId));
+  };
+
+  const openEditModal = (sensor) => {
+    setEditingDevice(sensor);
+    setEditFormData({
+      deviceId: sensor.id,
+      deviceType: sensor.deviceType || 'Occupancy',
+      location: sensor.area || '',
+      area: sensor.areaNumber || '1'
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingDevice(null);
+    setEditFormData({});
+    setIsSaving(false);
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate API call - replace with actual API endpoint
+      const response = await fetch(`https://optimusd.flowfuse.cloud/pag-devices/${editFormData.deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editFormData)
+      });
+      
+      if (response.ok) {
+        console.log('Device updated successfully:', editFormData);
+        // Here you would typically refresh the data or update the local state
+        // For now, we'll just close the modal
+        closeEditModal();
+        // You might want to trigger a refresh of the parent component
+        alert('Device updated successfully!');
+      } else {
+        throw new Error('Failed to update device');
+      }
+    } catch (error) {
+      console.error('Error updating device:', error);
+      alert('Failed to update device. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -155,7 +212,13 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [], defaultExpanded =
 
                       {/* Edit */}
                       <div className="col-span-1 md:col-span-2 text-right">
-                        <button className="px-4 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(sensor);
+                          }}
+                          className="px-4 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
                           Edit
                         </button>
                       </div>
@@ -165,6 +228,104 @@ const SensorSummaryCard = ({ title, count, icon, sensors = [], defaultExpanded =
               );
             })
           )}
+        </div>
+      )}
+
+      {/* Edit Device Modal */}
+      {editingDevice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Edit Device</h2>
+              <button
+                onClick={closeEditModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              {/* Device ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Device ID
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.deviceId || ''}
+                  onChange={(e) => handleInputChange('deviceId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                  readOnly
+                />
+              </div>
+
+              {/* Device Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Device Type
+                </label>
+                <select
+                  value={editFormData.deviceType || ''}
+                  onChange={(e) => handleInputChange('deviceType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="Occupancy">Occupancy</option>
+                  <option value="IAQ">IAQ</option>
+                  <option value="Temperature">Temperature</option>
+                  <option value="Motion">Motion</option>
+                </select>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.location || ''}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter location (e.g., ComputerRoom1)"
+                />
+              </div>
+
+              {/* Area */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Area
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.area || ''}
+                  onChange={(e) => handleInputChange('area', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter area number (e.g., 1)"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t bg-gray-50">
+              <button
+                onClick={closeEditModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

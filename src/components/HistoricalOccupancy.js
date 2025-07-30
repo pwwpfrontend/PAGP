@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import OccupancyFilters from "./OccupancyFilters";
 import OccupancyCharts from "./OccupancyCharts";
@@ -81,7 +82,7 @@ const HistoricalOccupancy = () => {
 
   // Enhanced data processing for hourly reports
   const processHourlyData = (data) => {
-    console.log("Processing hourly data:", data);
+    console.log("Processing hourly data for table:", data);
     
     if (!Array.isArray(data)) {
       console.error("Expected array for hourly data, got:", typeof data);
@@ -89,64 +90,61 @@ const HistoricalOccupancy = () => {
     }
 
     const filteredData = filterByDataType(data);
-    console.log("Filtered data for processing:", filteredData);
+    console.log("Filtered data for table processing:", filteredData);
 
-    const processedData = filteredData.map((item, index) => {
-      console.log(`Processing item ${index}:`, item);
-      
-      // Try different possible field names from API
-      const occupancy = item.occupancy || 
-                       item.occupancy_count || 
-                       item.current_occupancy || 
-                       safeParseNumber(item.occupancy_percentage);
-      
-      // Try to extract hour from different possible fields
-      let hour = item.hour;
-      if (hour === undefined || hour === null) {
-        hour = item.time_hour || item.current_hour;
-        
-        // If still no hour, try to extract from date/timestamp
-        if ((hour === undefined || hour === null) && item.date) {
-          const dateObj = new Date(item.date);
-          hour = dateObj.getHours();
-        }
-        
-        // If still no hour, use current hour as fallback
-        if (hour === undefined || hour === null) {
-          hour = new Date().getHours();
-        }
+    // Group data by area_id to aggregate hourly data for table display
+    const groupedByAreaId = {};
+    
+    filteredData.forEach(item => {
+      const areaId = item.area_id;
+      if (!groupedByAreaId[areaId]) {
+        groupedByAreaId[areaId] = {
+          area_id: areaId,
+          hours: [],
+          total_occupancy: 0,
+          total_occupancy_percentage: 0,
+          count: 0
+        };
       }
       
-      const occupancyPercentage = item.occupancy_percentage || 
-                                 item.percentage || 
-                                 `${occupancy}%`;
-
-      // Convert UTC to JST (UTC+9) if date field exists
-      let processedDate = new Date().toISOString();
-      if (item.date) {
-        try {
-          const utcDate = new Date(item.date);
-          const jstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
-          processedDate = jstDate.toISOString();
-        } catch (e) {
-          console.warn("Error processing date:", item.date, e);
-        }
-      }
-
-      const processed = {
-        area_id: item.area_id || `Unknown-${index}`,
-        occupancy: safeParseNumber(occupancy),
-        hour: safeParseNumber(hour),
-        occupancy_percentage: occupancyPercentage,
-        date: processedDate,
-        raw_item: item // Keep original for debugging
-      };
-
-      console.log(`Processed item ${index}:`, processed);
-      return processed;
+      const hour = safeParseNumber(item.hour || item.time_hour || item.current_hour || 0);
+      const occupancy = safeParseNumber(item.occupancy || item.occupancy_count || item.current_occupancy || 0);
+      const occupancyPercentage = safeParseNumber(item.occupancy_percentage?.replace('%', '') || 0);
+      
+      groupedByAreaId[areaId].hours.push({
+        hour,
+        occupancy,
+        occupancy_percentage: occupancyPercentage
+      });
+      
+      groupedByAreaId[areaId].total_occupancy += occupancy;
+      groupedByAreaId[areaId].total_occupancy_percentage += occupancyPercentage;
+      groupedByAreaId[areaId].count++;
     });
 
-    console.log("Final processed hourly data:", processedData);
+    // Convert grouped data to table format
+    const processedData = Object.values(groupedByAreaId).map(group => {
+      // Calculate the average occupancy percentage for business hours (9 to 17)
+      const businessHours = group.hours.filter(h => h.hour >= 9 && h.hour <= 17);
+      const totalPercent = businessHours.reduce((sum, h) => sum + h.occupancy_percentage, 0);
+      const avgOccupancyPercent = businessHours.length ? (totalPercent / 9) : 0;
+      
+      console.log(`Table data for ${group.area_id}:`, {
+        avgOccupancyPercent,
+        totalHours: group.hours.length
+      });
+      
+      return {
+        area_id: group.area_id,
+        occupancy: group.total_occupancy,
+        occupancy_percentage: avgOccupancyPercent.toFixed(2) + '%',
+        date: dateRange.selectedDate,
+        all_hours_data: group.hours,
+        raw_item: group
+      };
+    });
+
+    console.log("Final processed hourly table data:", processedData);
     return processedData;
   };
 
@@ -208,31 +206,54 @@ const HistoricalOccupancy = () => {
     try {
       let url, data;
       
-      if (reportType === "hourly") {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, 0, 0);
-        const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, 59, 59);
+      if (reportType === "daily") {
+        // Use the existing table data that contains all_hours_data for this area
+        const tableItem = tableData.find(item => item.area_id === areaId);
         
-        url = `${API_BASE_URL}/api/hour-data?area_id=${encodeURIComponent(areaId)}&start_time=${startTime.toISOString()}&end_time=${endTime.toISOString()}`;
-        
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        data = await response.json();
-        
-        if (Array.isArray(data) && data.length > 0) {
-          const chartData = [{
-            hour: currentHour,
-            hour_display: formatHour(currentHour),
-            occupancy: safeParseNumber(data[0].occupancy_percentage)
-          }];
+        if (tableItem && tableItem.all_hours_data) {
+          console.log(`Using existing hourly data for ${areaId}:`, tableItem.all_hours_data);
+          
+          // For daily reports, show full business hours from 9:00 to 17:00 (9 AM to 5 PM)
+          const startHour = 9;
+          const endHour = 17;
+          
+          // Always show full business hours regardless of current time
+          const displayEndHour = endHour;
+          
+          console.log(`Display hours range: ${startHour} to ${displayEndHour}`);
+          
+          const businessHoursData = [];
+          for (let hour = startHour; hour <= displayEndHour; hour++) {
+            businessHoursData.push({
+              hour: hour,
+              hour_display: formatHour(hour),
+              occupancy: 0
+            });
+          }
+          
+          // Fill in actual data from table's all_hours_data
+          tableItem.all_hours_data.forEach(hourData => {
+            const hour = safeParseNumber(hourData.hour);
+            if (hour >= startHour && hour <= displayEndHour) {
+              const index = hour - startHour;
+              if (index >= 0 && index < businessHoursData.length) {
+                businessHoursData[index].occupancy = hourData.occupancy_percentage;
+              }
+            }
+          });
+          
+          console.log(`Hourly chart data for ${areaId}:`, businessHoursData);
           
           setChartDataMap(prev => ({
             ...prev,
-            [areaId]: chartData
+            [areaId]: businessHoursData
           }));
+          
+          return; // Exit early since we used table data
         }
-      } else if (reportType === "daily") {
+        
+        // Fallback: fetch from API if table data doesn't have all_hours_data
+        console.log(`Fetching fresh hourly data for ${areaId} from API`);
         const selectedDate = new Date(dateRange.selectedDate);
         const startTime = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0);
         const endTime = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59);
@@ -244,19 +265,36 @@ const HistoricalOccupancy = () => {
         data = await response.json();
         
         if (Array.isArray(data)) {
-          const businessHoursData = Array(13).fill().map((_, index) => ({
-            hour: index + 9,
-            hour_display: formatHour(index + 9),
-            occupancy: 0
-          }));
+          // For daily reports, show full business hours from 9:00 to 17:00 (9 AM to 5 PM)
+          const startHour = 9;
+          const endHour = 17;
           
+          // Always show full business hours regardless of current time
+          const displayEndHour = endHour;
+          
+          const businessHoursData = [];
+          for (let hour = startHour; hour <= displayEndHour; hour++) {
+            businessHoursData.push({
+              hour: hour,
+              hour_display: formatHour(hour),
+              occupancy: 0
+            });
+          }
+          
+          // Fill in actual data from API
           data.forEach(item => {
             const hour = safeParseNumber(item.hour);
-            if (hour >= 9 && hour <= 21) {
-              const index = hour - 9;
-              businessHoursData[index].occupancy = safeParseNumber(item.occupancy_percentage);
+            if (hour >= startHour && hour <= displayEndHour) {
+              const index = hour - startHour;
+              if (index >= 0 && index < businessHoursData.length) {
+                // API returns occupancy_percentage as "25%", convert to number for charts
+                const occupancyValue = parseFloat((item.occupancy_percentage || '0%').replace('%', ''));
+                businessHoursData[index].occupancy = occupancyValue;
+              }
             }
           });
+          
+          console.log(`Hourly chart data for ${areaId}:`, businessHoursData);
           
           setChartDataMap(prev => ({
             ...prev,
@@ -264,6 +302,7 @@ const HistoricalOccupancy = () => {
           }));
         }
       } else {
+        // For daily, weekly, monthly, custom - all use daily-average-occupancy
         const startTime = new Date(dateRange.startDate + 'T00:00:00.000Z');
         const endTime = new Date(dateRange.endDate + 'T23:59:59.000Z');
         
@@ -279,7 +318,8 @@ const HistoricalOccupancy = () => {
             return {
               date: item.date,
               date_display: `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}`,
-              occupancy: safeParseNumber(item.average_hourly_occupancy)
+              // Use occupancy_percentage for chart display
+              occupancy: parseFloat((item.occupancy_percentage || '0%').replace('%', ''))
             };
           }).sort((a, b) => new Date(a.date) - new Date(b.date));
           
@@ -345,7 +385,7 @@ const HistoricalOccupancy = () => {
     try {
       let url, data;
       
-      if (reportType === "hourly") {
+      if (reportType === "daily") {
         console.log("Fetching hourly data...");
         
         // Use the selected date for hourly reports
@@ -428,10 +468,12 @@ const HistoricalOccupancy = () => {
         
         let startTime, endTime;
         
-        if (reportType === "daily") {
-          const selectedDate = new Date(dateRange.selectedDate);
-          startTime = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0);
-          endTime = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59);
+        if (reportType === "weekly") {
+          startTime = new Date(dateRange.startDate + 'T00:00:00.000Z');
+          endTime = new Date(dateRange.endDate + 'T23:59:59.000Z');
+        } else if (reportType === "monthly") {
+          startTime = new Date(dateRange.startDate + 'T00:00:00.000Z');
+          endTime = new Date(dateRange.endDate + 'T23:59:59.000Z');
         } else {
           startTime = new Date(dateRange.startDate + 'T00:00:00.000Z');
           endTime = new Date(dateRange.endDate + 'T23:59:59.000Z');
@@ -452,44 +494,65 @@ const HistoricalOccupancy = () => {
         logApiResponse("daily-average-occupancy", data);
         
         if (Array.isArray(data)) {
-          if (reportType === "daily") {
-            const processedData = processDailyData(data);
-            setTableData(processedData);
-          } else {
-            // Weekly or Custom: Group by area_id and calculate average
-            const groupedData = {};
+          // Process all non-hourly reports using daily-average-occupancy data
+          const groupedData = {};
+          
+          data.forEach(item => {
+            if (!groupedData[item.area_id]) {
+              groupedData[item.area_id] = {
+                area_id: item.area_id,
+                total_occupancy: 0,
+                total_occupancy_percentage: 0,
+                count: 0,
+                dates: [],
+                daily_data: [] // Store individual day data for charts
+              };
+            }
             
-            data.forEach(item => {
-              if (!groupedData[item.area_id]) {
-                groupedData[item.area_id] = {
-                  area_id: item.area_id,
-                  total_occupancy: 0,
-                  count: 0,
-                  dates: []
-                };
-              }
-              
-              const occupancy = safeParseNumber(item.average_hourly_occupancy);
-              groupedData[item.area_id].total_occupancy += occupancy;
-              groupedData[item.area_id].count += 1;
-              groupedData[item.area_id].dates.push(item.date);
+            const occupancy = safeParseNumber(item.average_hourly_occupancy);
+            const occupancyPercentage = safeParseNumber(item.occupancy_percentage?.replace('%', '') || 0);
+            
+            groupedData[item.area_id].total_occupancy += occupancy;
+            groupedData[item.area_id].total_occupancy_percentage += occupancyPercentage;
+            groupedData[item.area_id].count += 1;
+            groupedData[item.area_id].dates.push(item.date);
+            groupedData[item.area_id].daily_data.push({
+              date: item.date,
+              occupancy: occupancy,
+              occupancy_percentage: occupancyPercentage
             });
-            
-            const processedData = Object.values(groupedData)
-              .filter(group => group.count > 0)
-              .map(group => {
-                const sortedDates = group.dates.sort();
+          });
+          
+          const processedData = Object.values(groupedData)
+            .filter(group => group.count > 0)
+            .map(group => {
+              const sortedDates = group.dates.sort();
+              
+            if (reportType === "custom") {
+                // For custom: take averages
                 const avgOccupancy = (group.total_occupancy / group.count);
+                const avgOccupancyPercentage = (group.total_occupancy_percentage / group.count);
                 return {
                   area_id: group.area_id,
                   average_hourly_occupancy: avgOccupancy.toFixed(2),
-                  occupancy_percentage: avgOccupancy.toFixed(2) + "%",
-                  date_range: `${sortedDates[0]} to ${sortedDates[sortedDates.length - 1]}`
+                  occupancy_percentage: avgOccupancyPercentage.toFixed(2) + "%",
+                  date_range: `${sortedDates[0]} to ${sortedDates[sortedDates.length - 1]}`,
+                  daily_data: group.daily_data
                 };
-              });
-            
-            setTableData(filterByDataType(processedData));
-          }
+              } else {
+                const avgOccupancyPercentage = (group.total_occupancy_percentage / group.count);
+                const sumOccupancy = (group.total_occupancy / group.count); // Use sum for weekly/monthly
+                return {
+                  area_id: group.area_id,
+                  average_hourly_occupancy: sumOccupancy.toFixed(2),
+                  occupancy_percentage: avgOccupancyPercentage.toFixed(2) + "%",
+                  date_range: `${sortedDates[0]} to ${sortedDates[sortedDates.length - 1]}`,
+                  daily_data: group.daily_data
+                };
+              }
+            });
+          
+          setTableData(filterByDataType(processedData));
         } else {
           console.error("Expected array from daily API, got:", typeof data);
           setApiError("API returned unexpected data format");
@@ -519,15 +582,21 @@ const HistoricalOccupancy = () => {
     });
     
     // Validate date range before fetching
-    if (reportType === "hourly" && !dateRange.selectedDate) {
-      console.error("No selected date for hourly report");
-      setApiError("No selected date for hourly report");
+    if (reportType === "daily" && !dateRange.selectedDate) {
+      console.error("No selected date for daily report");
+      setApiError("No selected date for daily report");
       return;
     }
     
     if (reportType === "custom" && (!dateRange.startDate || !dateRange.endDate)) {
-      console.error("Missing start or end date for custom report");
-      setApiError("Missing start or end date for custom report");
+      console.error("Missing start or end date for report");
+      setApiError("Missing start or end date for report");
+      return;
+    }
+    
+    if ((reportType === "weekly" || reportType === "monthly") && (!dateRange.startDate || !dateRange.endDate)) {
+      console.error("Missing calculated date range for report");
+      setApiError("Missing calculated date range for report");
       return;
     }
     
@@ -640,16 +709,13 @@ const HistoricalOccupancy = () => {
                   <th className="text-left px-4 py-4 font-semibold text-gray-700 w-2/5">
                     Area ID
                   </th>
-                  {reportType === "hourly" ? (
+                  {reportType === "daily" ? (
                     <>
                       <th className="text-center px-4 py-4 font-semibold text-gray-700 w-1/5">
-                        Occupancy
+                        Total Occupancy
                       </th>
                       <th className="text-center px-4 py-4 font-semibold text-gray-700 w-1/5">
                         Occupancy Percentage
-                      </th>
-                      <th className="text-center px-4 py-4 font-semibold text-gray-700 w-1/5">
-                        Hour
                       </th>
                     </>
                   ) : (
@@ -681,19 +747,13 @@ const HistoricalOccupancy = () => {
                       <td className="text-left px-4 py-4 font-medium text-gray-900">
                         {item.area_id}
                       </td>
-                      {reportType === "hourly" ? (
+                      {reportType === "daily" ? (
                         <>
                           <td className="text-center px-4 py-4 text-gray-700 font-medium">
                             {item.occupancy !== undefined && item.occupancy !== null ? item.occupancy : 0}
                           </td>
                           <td className="text-center px-4 py-4 text-gray-700 font-medium">
                             {item.occupancy_percentage || '0.00%'}
-                          </td>
-                          <td className="text-center px-4 py-4 text-gray-700 font-medium">
-                            {item.hour !== undefined && item.hour !== null ? 
-                              formatHour(item.hour) : 
-                              '--'
-                            }
                           </td>
                         </>
                       ) : (
@@ -718,7 +778,7 @@ const HistoricalOccupancy = () => {
                     </tr>
                     {expandedRow === item.area_id && (
                       <tr>
-                        <td colSpan={reportType === "hourly" ? "5" : "4"} className="p-0">
+                        <td colSpan={reportType === "daily" ? "4" : "4"} className="p-0">
                           <OccupancyCharts
                             item={item}
                             reportType={reportType}
