@@ -8,23 +8,16 @@ import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCale
 // import axios from "axios"; // Not needed for this implementation
 
 // Occupancy Icon Component
-// Stroke-based User Icon
 const OccupancyIcon = ({ className = "w-5 h-5" }) => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     className={className}
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3" // Increased from 2 to 3 for thicker lines
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
   >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
   </svg>
 );
-
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -247,34 +240,6 @@ const getOccupancyCount = (room) => {
   return 0;
 };
 
-  // Occupancy Badge Component
-  const OccupancyBadge = () => {
-    if (isDataLoading) {
-      return (
-        <div className="flex items-center bg-gray-200 text-gray-600 px-3 py-2 rounded-full shadow-sm">
-          <OccupancyIcon className="w-4 h-4 mr-2 animate-pulse" />
-          <span className="text-sm font-medium">...</span>
-        </div>
-      );
-    }
-
-    if (dataError) {
-      return (
-        <div className="flex items-center bg-red-100 text-red-600 px-3 py-2 rounded-full shadow-sm">
-          <OccupancyIcon className="w-4 h-4 mr-2 opacity-50" />
-          <span className="text-sm font-medium">N/A</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-2 rounded-full shadow-sm">
-        <OccupancyIcon className="w-4 h-4 mr-2" />
-        <span className="text-sm font-bold">{totalOccupancy}</span>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
@@ -290,9 +255,8 @@ const getOccupancyCount = (room) => {
         
         <img src="/PAG.png" alt="Logo" className="h-8 lg:h-12 mx-auto" onError={(e) => e.target.style.display = 'none'} />
         
-        {/* Occupancy Count Badge */}
+        {/* Empty div to maintain header layout balance */}
         <div className="flex items-center">
-          <OccupancyBadge />
         </div>
       </header>
 
@@ -330,8 +294,8 @@ const getOccupancyCount = (room) => {
                   : 'linear-gradient(45deg, #55BC7E, #7DCA8B)',
               };
 
-              // Check if room needs occupancy count display
-              const showCount = (room === 'Gym' || room === 'Cafe') && Array.isArray(areaMap[room]);
+              // Check if room needs occupancy count display (only for Gym and Cafe in Common tab)
+              const showCount = activeTab === 3 && (room === 'Gym' || room === 'Cafe') && Array.isArray(areaMap[room]);
               const occupancyCount = showCount ? getOccupancyCount(room) : 0;
 
               return (
@@ -345,7 +309,7 @@ const getOccupancyCount = (room) => {
                   </div>
                   {showCount && (
                     <div className="flex items-center justify-center mt-2">
-                      <User className="w-4 h-4 mr-1" />
+                      <User className="w-4 h-4 mr-1" strokeWidth={2.5} />
                       <span className="text-sm font-bold">{occupancyCount}</span>
                     </div>
                   )}
