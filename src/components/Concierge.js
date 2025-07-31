@@ -188,18 +188,23 @@ const Concierge = () => {
     // Get occupancy count for all buttons
     const occupancyCount = getOccupancyCount(label);
 
+    // Different text sizes based on type
+    const labelTextClass = type === "meeting" 
+      ? "text-2xl font-bold text-center mb-1" 
+      : "text-center mb-1";
+
     return (
       <div className="p-1 sm:p-1.5" key={label}>
         <button
           className={`rounded-lg text-white text-sm sm:text-base font-medium ${sizeClass} flex flex-col items-center justify-center`}
           style={{ background: gradient }}
         >
-          <div className="text-center mb-1">
+          <div className={labelTextClass}>
             {label}
           </div>
           <div className="flex items-center justify-center space-x-1">
-            <User className="w-4 h-4" strokeWidth={3.5} />
-            <span className="text-xs font-bold">{occupancyCount}</span>
+            <User className="w-6 h-6" strokeWidth={2} />
+            <span className="text-2xl font-bold">{occupancyCount}</span>
           </div>
         </button>
       </div>
