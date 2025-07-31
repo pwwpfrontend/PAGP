@@ -309,7 +309,7 @@ const getOccupancyCount = (room) => {
                   </div>
                   {showCount && (
                     <div className="flex items-center justify-center mt-2">
-                      <User className="w-4 h-4 mr-1" strokeWidth={2.5} />
+                      <User className="w-4 h-4 mr-1" strokeWidth={3.5} />
                       <span className="text-sm font-bold">{occupancyCount}</span>
                     </div>
                   )}
