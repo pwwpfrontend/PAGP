@@ -99,7 +99,7 @@ const Concierge = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Function to get occupancy count for multi-area rooms (Gym and Cafe)
+  // Function to get occupancy count for any room/area
   const getOccupancyCount = (label) => {
     const areaId = areaMap[label];
     
@@ -108,6 +108,9 @@ const Concierge = () => {
         const match = occupancyData.find(item => item.areaId === id);
         return count + (match?.occupancy || 0);
       }, 0);
+    } else if (areaId) {
+      const match = occupancyData.find(item => item.areaId === areaId);
+      return match?.occupancy || 0;
     }
     
     return 0;
@@ -182,9 +185,8 @@ const Concierge = () => {
         ? "w-[150px] h-[80px] sm:w-[160px] sm:h-[85px]"
         : "w-[120px] h-[70px]";
 
-    // Check if button needs occupancy count display
-    const showCount = (label === 'Gym' || label === 'Cafe') && Array.isArray(areaMap[label]);
-    const occupancyCount = showCount ? getOccupancyCount(label) : 0;
+    // Get occupancy count for all buttons
+    const occupancyCount = getOccupancyCount(label);
 
     return (
       <div className="p-1 sm:p-1.5" key={label}>
@@ -195,13 +197,10 @@ const Concierge = () => {
           <div className="flex-1 flex items-center justify-center">
             {label}
           </div>
-       {showCount && (
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-1">
-        <User className="w-4 h-4" strokeWidth={3.5} />
-        <span className="text-xs font-bold">{occupancyCount}</span>
-      </div>
-    )}
-
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-1">
+            <User className="w-4 h-4" strokeWidth={3.5} />
+            <span className="text-xs font-bold">{occupancyCount}</span>
+          </div>
         </button>
       </div>
     );
