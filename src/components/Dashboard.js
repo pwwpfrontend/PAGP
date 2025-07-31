@@ -1,10 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
+import { User } from "lucide-react"; // Import User icon from lucide-react
 import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
 import HistoricalOccupancy from "./HistoricalOccupancy";
 import Bookings from "./Bookings"; // Import the Bookings component
 import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCalendarAlt for bookings icon
-import axios from "axios";
+// import axios from "axios"; // Not needed for this implementation
+
+// Occupancy Icon Component
+const OccupancyIcon = ({ className = "w-5 h-5" }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+  </svg>
+);
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -14,6 +27,9 @@ const Dashboard = () => {
   const [progressIntervalId, setProgressIntervalId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [occupancyData, setOccupancyData] = useState([]);
+  const [totalOccupancy, setTotalOccupancy] = useState(0);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(false);
 
   const tabs = ['PAGIM', 'PAG-S', 'PAG Japan', 'Common'];
 
@@ -60,7 +76,13 @@ const Dashboard = () => {
   ],
   "Nursing Room": "Nursing Room",
   "Nap Pod R": "Nap Pod R",
-  "Cafe": [], // No occupancy data, default to available
+ "Cafe": [
+    "PAG-33F-CAFE-01",
+    "PAG-33F-CAFE-02", 
+    "PAG-33F-CAFE-03",
+    "PAG-33F-CAFE-04",
+    "PAG-33F-CAFE-05"
+  ], 
   
   "War Room": "PAG-33F-WARROOM",
   "Beijing": "PAG-33F-BEIJING",
@@ -75,7 +97,7 @@ const Dashboard = () => {
   "Sydney": "PAG-33F-SYDNEY", 
   "Delhi": "PAG-33F-DELHI",      
   "London": "PAG-33F-LONDON",   
-  "Tokyo": "Tokyo",            
+  "Tokyo": "PAG-33F-TOKYO",            
   "Hong Kong": "PAG-33F-HONGKONG",  
   "Singapore": "PAG-33F-SINGAPORE",  
   "New York": "PAG-33F-NEWYORK",  
@@ -87,22 +109,38 @@ const Dashboard = () => {
 
   const fetchOccupancyData = async () => {
     try {
+      setIsDataLoading(true);
+      setDataError(false);
+      
       const response = await fetch(API_URL, {
         headers: {
-          Authorization: `Bearer ${BEARER_TOKEN}`
+          Authorization: BEARER_TOKEN
         }
       });
+      
       if (!response.ok) throw new Error("Failed to fetch data");
+      
       const data = await response.json();
       setOccupancyData(data);
+      
+      // Calculate total occupancy
+      const total = Array.isArray(data) ? data.reduce((sum, item) => {
+        return sum + (item.occupancy || 0);
+      }, 0) : 0;
+      
+      setTotalOccupancy(total);
+      setIsDataLoading(false);
     } catch (error) {
       console.error("API fetch error:", error);
+      setDataError(true);
+      setIsDataLoading(false);
+      setTotalOccupancy(0);
     }
   };
 
   useEffect(() => {
     fetchOccupancyData();
-    const apiInterval = setInterval(fetchOccupancyData, 3000);
+    const apiInterval = setInterval(fetchOccupancyData, 30000);
     return () => clearInterval(apiInterval);
   }, []);
 
@@ -188,7 +226,47 @@ const isRoomOccupied = (room) => {
   return match?.occupancy === 1;
 };
 
+// Function to get occupancy count for multi-area rooms (Gym and Cafe)
+const getOccupancyCount = (room) => {
+  const areaId = areaMap[room] || room;
+  
+  if (Array.isArray(areaId)) {
+    return areaId.reduce((count, id) => {
+      const match = occupancyData.find(item => item.areaId === id);
+      return count + (match?.occupancy || 0);
+    }, 0);
+  }
+  
+  return 0;
+};
 
+  // Occupancy Badge Component
+  const OccupancyBadge = () => {
+    if (isDataLoading) {
+      return (
+        <div className="flex items-center bg-gray-200 text-gray-600 px-3 py-2 rounded-full shadow-sm">
+          <OccupancyIcon className="w-4 h-4 mr-2 animate-pulse" />
+          <span className="text-sm font-medium">...</span>
+        </div>
+      );
+    }
+
+    if (dataError) {
+      return (
+        <div className="flex items-center bg-red-100 text-red-600 px-3 py-2 rounded-full shadow-sm">
+          <OccupancyIcon className="w-4 h-4 mr-2 opacity-50" />
+          <span className="text-sm font-medium">N/A</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-2 rounded-full shadow-sm">
+        <OccupancyIcon className="w-4 h-4 mr-2" />
+        <span className="text-sm font-bold">{totalOccupancy}</span>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
@@ -202,7 +280,13 @@ const isRoomOccupied = (room) => {
             <span className="block sm:w-8 sm:h-1 w-4 h-0.5 bg-gray-700"></span>
           </button>
         </div>
+        
         <img src="/PAG.png" alt="Logo" className="h-8 lg:h-12 mx-auto" onError={(e) => e.target.style.display = 'none'} />
+        
+        {/* Occupancy Count Badge */}
+        <div className="flex items-center">
+          <OccupancyBadge />
+        </div>
       </header>
 
       <div className="pt-20 lg:pt-28 px-4 md:px-8">
@@ -238,13 +322,26 @@ const isRoomOccupied = (room) => {
                   ? 'linear-gradient(45deg, #E67A69, #EB9F94)'
                   : 'linear-gradient(45deg, #55BC7E, #7DCA8B)',
               };
+
+              // Check if room needs occupancy count display
+              const showCount = (room === 'Gym' || room === 'Cafe') && Array.isArray(areaMap[room]);
+              const occupancyCount = showCount ? getOccupancyCount(room) : 0;
+
               return (
                 <div
                   key={`${activeTab}-${index}`}
                   style={bgStyle}
-                  className="text-white rounded-xl p-4 sm:p-6 text-center font-medium cursor-pointer min-h-[100px] flex items-center justify-center text-sm sm:text-lg"
+                  className="text-white rounded-xl p-4 sm:p-6 text-center font-medium cursor-pointer min-h-[100px] flex flex-col items-center justify-center text-sm sm:text-lg relative"
                 >
-                  {room}
+                  <div className="flex-1 flex items-center justify-center">
+                    {room}
+                  </div>
+                  {showCount && (
+                    <div className="flex items-center justify-center mt-2">
+                      <User className="w-4 h-4 mr-1" />
+                      <span className="text-sm font-bold">{occupancyCount}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
