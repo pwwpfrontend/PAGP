@@ -8,16 +8,23 @@ import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCale
 // import axios from "axios"; // Not needed for this implementation
 
 // Occupancy Icon Component
+// Stroke-based User Icon
 const OccupancyIcon = ({ className = "w-5 h-5" }) => (
   <svg
+    xmlns="http://www.w3.org/2000/svg"
     className={className}
     viewBox="0 0 24 24"
-    fill="currentColor"
-    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3" // Increased from 2 to 3 for thicker lines
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
+
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);

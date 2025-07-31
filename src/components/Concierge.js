@@ -1,10 +1,28 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User } from "lucide-react"; // Import User icon from lucide-react
 import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
 import HistoricalOccupancy from "./HistoricalOccupancy";
 import Bookings from "./Bookings"; // Import the Bookings component
 import axios from "axios";
+
+// Custom Occupancy Icon Component
+const OccupancyIcon = ({ className = "w-7 h-7" }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3" // Increased from 2 to 3 for thicker lines
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+
 
 const Concierge = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -197,7 +215,7 @@ const Concierge = () => {
           </div>
           {showCount && (
             <div className="flex items-center justify-center mt-1">
-              <User className="w-3 h-3 mr-1" />
+              <OccupancyIcon className="w-3 h-3 mr-1" />
               <span className="text-xs font-bold">{occupancyCount}</span>
             </div>
           )}
