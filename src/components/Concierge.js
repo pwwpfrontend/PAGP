@@ -195,12 +195,13 @@ const Concierge = () => {
           <div className="flex-1 flex items-center justify-center">
             {label}
           </div>
-          {showCount && (
-            <div className="flex items-center justify-center mt-1">
-              <User className="w-3 h-3 mr-1" />
-              <span className="text-xs font-bold">{occupancyCount}</span>
-            </div>
-          )}
+       {showCount && (
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-1">
+        <User className="w-4 h-4" strokeWidth={3.5} />
+        <span className="text-xs font-bold">{occupancyCount}</span>
+      </div>
+    )}
+
         </button>
       </div>
     );
