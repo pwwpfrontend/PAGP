@@ -191,13 +191,13 @@ const Concierge = () => {
     return (
       <div className="p-1 sm:p-1.5" key={label}>
         <button
-          className={`rounded-lg text-white text-sm sm:text-base font-medium ${sizeClass} flex flex-col items-center justify-center relative`}
+          className={`rounded-lg text-white text-sm sm:text-base font-medium ${sizeClass} flex flex-col items-center justify-center`}
           style={{ background: gradient }}
         >
-          <div className="flex-1 flex items-center justify-center">
+          <div className="text-center mb-1">
             {label}
           </div>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-1">
+          <div className="flex items-center justify-center space-x-1">
             <User className="w-4 h-4" strokeWidth={3.5} />
             <span className="text-xs font-bold">{occupancyCount}</span>
           </div>
