@@ -4,11 +4,10 @@ import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
 import HistoricalOccupancy from "./HistoricalOccupancy";
 import Bookings from "./Bookings"; // Import the Bookings component
-import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCalendarAlt for bookings icon
-// import axios from "axios"; // Not needed for this implementation
+import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; 
 
 // Occupancy Icon Component
-const OccupancyIcon = ({ className = "w-5 h-5" }) => (
+const OccupancyIcon = ({ className = "w-6 h-6" }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
@@ -156,56 +155,100 @@ const Dashboard = () => {
     };
   };
 
-  const animationRef = useRef(null);
-const startTimeRef = useRef(null);
+  const timerRef = useRef(null);
+  const progressRef = useRef(0);
 
-   
-const startTimer = () => {
-  cancelAnimationFrame(animationRef.current);
-  startTimeRef.current = performance.now();
-  setProgress(0);
-
-  const animate = (time) => {
-    const elapsed = time - startTimeRef.current;
-    const duration = 10000; // 10 seconds
-    const progressPercent = Math.min((elapsed / duration) * 100, 100);
-    setProgress(progressPercent);
-
-    if (elapsed < duration) {
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      // Move to next tab and restart
-      setActiveTab(prev => (prev + 1) % tabs.length);
-      startTimer();
+  const startTimer = () => {
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
+    
+    // Reset progress
+    progressRef.current = 0;
+    setProgress(0);
+    
+    // Start new timer - update every 100ms for smooth animation
+    timerRef.current = setInterval(() => {
+      progressRef.current += 1; // Increase by 1% every 100ms (10 seconds total)
+      setProgress(progressRef.current);
+      
+      if (progressRef.current >= 100) {
+        // Reset and move to next tab
+        progressRef.current = 0;
+        setProgress(0);
+        setActiveTab(prev => (prev + 1) % tabs.length);
+      }
+    }, 100); // 100ms intervals = 1% progress each time = 10 seconds total
   };
 
-  animationRef.current = requestAnimationFrame(animate);
-};
+  const handleTabClick = (index) => {
+    setActiveTab(index);
+  };
 
+  // Start timer when activeTab changes or component mounts
+  useEffect(() => {
+    startTimer();
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [activeTab]);
 
-const handleTabClick = (index) => {
-  cancelAnimationFrame(animationRef.current);
-  setActiveTab(index);
-  setProgress(0);
-  startTimer();
-};
+  // Clock timer
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
+    return () => {
+      clearInterval(clockInterval);
+    };
+  }, []);
 
+  // Handle page visibility and focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        startTimer();
+      } else {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      }
+    };
 
- useEffect(() => {
-  const clockInterval = setInterval(() => {
-    setCurrentTime(new Date());
-  }, 1000);
-  startTimer();
+    const handleFocus = () => {
+      startTimer();
+    };
 
-return () => {
-  clearInterval(clockInterval);
-  cancelAnimationFrame(animationRef.current);
-};
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('pageshow', handleFocus);
 
-}, []);
+    // Also restart when component becomes visible again
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startTimer();
+        }
+      });
+    });
 
+    const dashboardElement = document.querySelector('.min-h-screen');
+    if (dashboardElement) {
+      observer.observe(dashboardElement);
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pageshow', handleFocus);
+      observer.disconnect();
+    };
+  }, []);
 
   const { time, date } = formatDateTime(currentTime);
   const currentRooms = meetingRoomsData[activeTab];
@@ -226,7 +269,7 @@ const isRoomOccupied = (room) => {
   return match?.occupancy === 1;
 };
 
-// Function to get occupancy count for multi-area rooms (Gym and Cafe)
+// Function to get occupancy count for any room/area
 const getOccupancyCount = (room) => {
   const areaId = areaMap[room] || room;
   
@@ -235,9 +278,20 @@ const getOccupancyCount = (room) => {
       const match = occupancyData.find(item => item.areaId === id);
       return count + (match?.occupancy || 0);
     }, 0);
+  } else if (areaId) {
+    const match = occupancyData.find(item => item.areaId === areaId);
+    return match?.occupancy || 0;
   }
   
   return 0;
+};
+
+// Function to check if a room is a meeting room (not phone booth or facility)
+const isMeetingRoom = (room) => {
+  const meetingRooms = ['War Room', 'Brisbane', 'Melbourne', 'Los Angeles', 'Delhi', 'London', 'New York', 
+                       'Shenzhen', 'Taipei', 'Beijing', 'Mumbai', 'Auckland', 'Shanghai', 'Sydney', 
+                       'Tokyo', 'Hong Kong', 'Singapore', 'Seoul'];
+  return meetingRooms.includes(room);
 };
 
   return (
@@ -294,25 +348,26 @@ const getOccupancyCount = (room) => {
                   : 'linear-gradient(45deg, #55BC7E, #7DCA8B)',
               };
 
-              // Check if room needs occupancy count display (only for Gym and Cafe in Common tab)
-              const showCount = activeTab === 3 && (room === 'Gym' || room === 'Cafe') && Array.isArray(areaMap[room]);
-              const occupancyCount = showCount ? getOccupancyCount(room) : 0;
+              // Get occupancy count for all rooms
+              const occupancyCount = getOccupancyCount(room);
+              
+              // Determine text size based on room type
+              const isRoomMeeting = isMeetingRoom(room);
+              const roomTextClass = isRoomMeeting ? "text-3xl font-bold" : "text-sm sm:text-lg";
 
               return (
                 <div
                   key={`${activeTab}-${index}`}
                   style={bgStyle}
-                  className="text-white rounded-xl p-4 sm:p-6 text-center font-medium cursor-pointer min-h-[100px] flex flex-col items-center justify-center text-sm sm:text-lg relative"
+                  className="text-white rounded-xl p-4 sm:p-6 text-center font-medium cursor-pointer min-h-[100px] flex flex-col items-center justify-center"
                 >
-                  <div className="flex-1 flex items-center justify-center">
+                  <div className={`flex-1 flex items-center justify-center mb-1 ${roomTextClass}`}>
                     {room}
                   </div>
-                  {showCount && (
-                    <div className="flex items-center justify-center mt-2">
-                      <User className="w-4 h-4 mr-1" strokeWidth={3.5} />
-                      <span className="text-sm font-bold">{occupancyCount}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-center space-x-1">
+                    <User className="w-6 h-6" strokeWidth={2} />
+                    <span className="text-2xl font-bold">{occupancyCount}</span>
+                  </div>
                 </div>
               );
             })}
