@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 import IAQAnalytics from "./HistoricalIAQ";
-import HistoricalOccupancy from "./HistoricalOccupancy";
+import OccupancyAnalysis from "./HistoricalOccupancy";
 import Bookings from "./Bookings"; // Import the Bookings component
 import { FaWind, FaUsers, FaCalendarAlt } from "react-icons/fa"; // Added FaCalendarAlt for bookings icon
 import axios from "axios";
@@ -181,7 +181,7 @@ const MainAnalytics = () => {
 
             {activeTab === "occupancy" && (
               <div className="occupancy-tab">
-                <HistoricalOccupancy />
+                <OccupancyAnalysis />
               </div>
             )}
 

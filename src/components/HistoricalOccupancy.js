@@ -5,7 +5,7 @@ import OccupancyCharts from "./OccupancyCharts";
 import { Menu, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "./Button";
 
-const HistoricalOccupancy = () => {
+const OccupancyAnalysis = () => {
   const [tableData, setTableData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [reportType, setReportType] = useState("daily");
@@ -881,4 +881,4 @@ const HistoricalOccupancy = () => {
   );
 };
 
-export default HistoricalOccupancy;
+export default OccupancyAnalysis;
